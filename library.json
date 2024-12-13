@@ -1,0 +1,22 @@
+{
+  "name": "Teensy-USBHost-Streamdeck",
+  "version": "0.1.0",
+  "description": "Streamdeck add-on controllers for Teensy4.x USBHost_t36 library.",
+  "keywords": "streamdeck",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/litui/Teensy-USBHost-Streamdeck.git"
+  },
+  "authors":
+  [
+    {
+      "name": "Aria Burrell",
+      "email": "litui@litui.ca",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": "teensy"
+}

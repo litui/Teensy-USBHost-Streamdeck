@@ -26,31 +26,9 @@ Credit to:
 */
 #include "streamdeck.hpp"
 
-void dump_hexbytes(const void *ptr, uint32_t len, uint32_t indent) {
-  if (ptr == NULL || len == 0)
-    return;
-  uint32_t count = 0;
-  //  if (len > 64) len = 64; // don't go off deep end...
-  const uint8_t *p = (const uint8_t *)ptr;
-  while (len--) {
-    if (*p < 16)
-      Serial.print('0');
-    Serial.print(*p++, HEX);
-    count++;
-    if (((count & 0x1f) == 0) && len) {
-      Serial.print("\n");
-      for (uint32_t i = 0; i < indent; i++)
-        Serial.print(" ");
-    } else
-      Serial.print(' ');
-  }
-  Serial.println();
-}
-
 void StreamdeckController::init() {
   USBHost::contribute_Transfers(mytransfers,
                                 sizeof(mytransfers) / sizeof(Transfer_t));
-  USBHost::contribute_Pipes(mypipes, sizeof(mypipes) / sizeof(Pipe_t));
   USBHIDParser::driver_ready_for_hid_collection(this);
 }
 
@@ -65,9 +43,8 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
     // 15 keys on the SD MkII
     num_states = 15U;
     states = (uint8_t *)calloc(num_states, sizeof(uint8_t));
-  } else {
+  } else
     return CLAIM_NO;
-  }
 
   mydevice = dev;
   collections_claimed++;
@@ -95,10 +72,11 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
   if (report->reportType != HID_REPORT_TYPE_IN)
     return false;
 
-  if (num_states != report->stateCount) {
-    USBHDBGSerial.printf(
-        "Warning: tracked number of states does not match input state count!");
-  }
+  // if (num_states != report->stateCount) {
+  //   USBHDBGSerial.printf(
+  //       "Warning: tracked number of states does not match input state
+  //       count!");
+  // }
 
   int16_t changed_index = -1;
   for (uint16_t i = 0; i < num_states; i++) {
@@ -122,21 +100,22 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
 }
 
 bool StreamdeckController::hid_process_out_data(const Transfer_t *transfer) {
-  Serial.printf("HID output success, length: %u\n", transfer->length);
+  // USBHDBGSerial.printf("HID output success, length: %u\n", transfer->length);
   if (pending_out_reports.size()) {
-    streamdeck_out_report_type_t *report = (streamdeck_out_report_type_t*) pending_out_reports.front();
-    Serial.printf("Resuming transfer of payload #%u.\n", report->payloadNumber);
-    if (driver_->sendPacket((const uint8_t *)report, 1024)) {
+    streamdeck_out_report_type_t *report =
+        (streamdeck_out_report_type_t *)pending_out_reports.front();
+    // USBHDBGSerial.printf("Resuming transfer of payload #%u.\n",
+    // report->payloadNumber);
+    if (driver_->sendPacket((const uint8_t *)report,
+                            sizeof(streamdeck_out_report_type_t))) {
       pending_out_reports.pop();
     }
   }
-  // dump_hexbytes(transfer->buffer, transfer->length, 0);
   return true;
 }
 
 bool StreamdeckController::hid_process_control(const Transfer_t *transfer) {
-  Serial.printf("HID Control...\n");
-  // dump_hexbytes(transfer->buffer, transfer->length, 0);
+  // USBHDBGSerial.printf("HID Control...\n");
   return true;
 }
 
@@ -184,10 +163,10 @@ void StreamdeckController::reset() {
   // Reset key images
   uint8_t *temp_buffer = (uint8_t *)&out_report[current_ob];
   temp_buffer[0] = 2U;
-  for (uint16_t i = 1; i < 1024U; i++) {
+  for (uint16_t i = 1; i < sizeof(streamdeck_out_report_type_t); i++) {
     temp_buffer[i] = 0;
   }
-  driver_->sendPacket(temp_buffer, 1024);
+  driver_->sendPacket(temp_buffer, sizeof(streamdeck_out_report_type_t));
   current_ob++;
 }
 
@@ -220,20 +199,23 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
     byteCount += sliceLen;
     pageCount++;
 
-    if (!driver_->sendPacket((const uint8_t *)&out_report[current_ob], 1024)) {
-      Serial.printf("Failed to send image payload #%u, queueing for later.\n",
-                    out_report[current_ob].payloadNumber);
+    if (!driver_->sendPacket((const uint8_t *)&out_report[current_ob],
+                             sizeof(streamdeck_out_report_type_t))) {
+      // USBHDBGSerial.printf("Failed to send image payload #%u, queueing for
+      // later.\n", out_report[current_ob].payloadNumber);
 
-      // Only queue reports up to the maximum output buffer limit, minus 2 (buffers already in use).
-      if (pending_out_reports.size() < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS-2) {
-        pending_out_reports.push((uint32_t) &out_report[current_ob]);
+      // Only queue reports up to the maximum output buffer limit, minus 2
+      // (buffers already in use).
+      if (pending_out_reports.size() <
+          STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS - 2) {
+        pending_out_reports.push((uint32_t)&out_report[current_ob]);
       }
     }
 
     current_ob = current_ob < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS - 1
                      ? current_ob + 1
                      : 0;
+    delay(1); // Slight delay to ensure ISR has time to work its magic between
+              // calls.
   }
-
-  // Set up appropriately sized buffers for transmitting data.
 }

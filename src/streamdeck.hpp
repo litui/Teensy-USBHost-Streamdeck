@@ -29,6 +29,8 @@ Credit to:
 #include <USBHost_t36.h>
 #include <queue>
 
+// This number of report buffers should be enough for 2-3 images to fully
+// buffer.
 #define STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS 15 // @ 1024 bytes each
 
 // 72 x 72 black JPEG
@@ -202,7 +204,5 @@ private:
   USBHIDParser *driver_;
   USBHost *host_;
 
-  // See if we can contribute transfers
-  Transfer_t mytransfers[8] __attribute__((aligned(32)));
-  Pipe_t mypipes[3] __attribute__((aligned(32)));
+  Transfer_t mytransfers[2] __attribute__((aligned(32)));
 };

@@ -151,16 +151,22 @@ void StreamdeckController::reset() {
   // TODO: switch this to rotating buffers in case reports get sent in
   // succession
   // This reset might trigger a port change, which is a problem.
-  // static streamdeck_feature_report_type_t report;
-  // report.reportType = 0x03;
-  // report.request = 0x02;
-  // report.value = 0;
-  // for (uint8_t i = 0; i < sizeof(report.filler); i++) {
-  //   report.filler[i] = 0;
-  // }
-  // setReport(report.reportType, 0, 0, &report, sizeof(report));
+  static streamdeck_feature_report_type_t report;
+  report.reportType = 0x03;
+  report.request = 0x02;
+  report.value = 0;
+  for (uint8_t i = 0; i < sizeof(report.filler); i++) {
+    report.filler[i] = 0;
+  }
+  setReport(report.reportType, 0, 0, &report, sizeof(report));
+}
 
-  // Reset key images
+// Sends a blank outbound report to the device and empties the pending queue.
+void StreamdeckController::flushImageReports() {
+  for (uint8_t i = 0; i < pending_out_reports.size(); i++) {
+    pending_out_reports.pop();
+  }
+
   uint8_t *temp_buffer = (uint8_t *)&out_report[current_ob];
   temp_buffer[0] = 2U;
   for (uint16_t i = 1; i < sizeof(streamdeck_out_report_type_t); i++) {
@@ -170,10 +176,19 @@ void StreamdeckController::reset() {
   current_ob++;
 }
 
+// Sets a blank (black) image to the given key
 void StreamdeckController::setKeyBlank(const uint16_t keyIndex) {
   setKeyImage(keyIndex, BLANK_KEY_IMAGE, sizeof(BLANK_KEY_IMAGE));
 }
 
+void StreamdeckController::blankAllKeys() {
+  for (uint16_t i = 0; i < num_states; i++) {
+    setKeyBlank(i);
+    delay(1);
+  }
+}
+
+// Sets a jpeg image of the given length to the given key
 void StreamdeckController::setKeyImage(const uint16_t keyIndex,
                                        const uint8_t *image, uint16_t length) {
   const uint16_t bytesPerPage = sizeof(streamdeck_out_report_type_t) - 8;
@@ -181,6 +196,13 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
   uint16_t byteCount = 0;
   // uint16_t totalPages = ceil((float)length / (float)bytesPerPage);
 
+  // Separate the image into chunks that fit into our 1024 bytes reports, set
+  // headers, and attempt to transfer them. If transfer buffers are full, adds
+  // their memory addresses to a queue which will be dealt with when previous
+  // transfers succeed.
+  //
+  // Logic adapted from:
+  // - https://den.dev/blog/reverse-engineering-stream-deck/
   while (byteCount < length) {
     out_report[current_ob].reportType = HID_REPORT_TYPE_OUT;
     out_report[current_ob].command = 7;
@@ -206,15 +228,13 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
 
       // Only queue reports up to the maximum output buffer limit, minus 2
       // (buffers already in use).
-      if (pending_out_reports.size() <
-          STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS - 2) {
+      if (pending_out_reports.size() < STREAMDECK_IMAGE_OUTPUT_BUFFERS - 2) {
         pending_out_reports.push((uint32_t)&out_report[current_ob]);
       }
     }
 
-    current_ob = current_ob < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS - 1
-                     ? current_ob + 1
-                     : 0;
+    current_ob =
+        current_ob < STREAMDECK_IMAGE_OUTPUT_BUFFERS - 1 ? current_ob + 1 : 0;
     delay(1); // Slight delay to ensure ISR has time to work its magic between
               // calls.
   }

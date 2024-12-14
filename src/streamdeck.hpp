@@ -31,7 +31,9 @@ Credit to:
 
 // This number of report buffers should be enough for 2-3 images to fully
 // buffer.
-#define STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS 15 // @ 1024 bytes each
+#ifndef STREAMDECK_IMAGE_OUTPUT_BUFFERS
+#define STREAMDECK_IMAGE_OUTPUT_BUFFERS 15 // @ 1024 bytes each
+#endif
 
 // 72 x 72 black JPEG
 const uint8_t BLANK_KEY_IMAGE[] = {
@@ -99,21 +101,18 @@ const uint8_t BLANK_KEY_IMAGE[] = {
 
 class StreamdeckController : public USBHIDInput {
 public:
-  StreamdeckController(USBHost &host) {
-    host_ = &host;
-    init();
-  }
-  StreamdeckController(USBHost *host) {
-    host_ = host;
-    init();
-  }
+  StreamdeckController(USBHost &host) { init(); }
+  StreamdeckController(USBHost *host) { init(); }
 
 public:
-  void reset();
   void setBrightness(float percent);
+  void flushImageReports();
   void setKeyImage(const uint16_t keyIndex, const uint8_t *image,
                    const uint16_t length);
   void setKeyBlank(const uint16_t keyIndex);
+  void blankAllKeys();
+  uint16_t getNumKeys() { return num_states; };
+  void reset();
 
   // Call these to attach your own function hooks
   void attachSinglePress(void (*f)(StreamdeckController *sdc,
@@ -193,16 +192,25 @@ private:
   uint16_t num_states = 0;
   uint8_t *states;
 
-  uint8_t drv_tx1_[1024];
-  uint8_t drv_tx2_[1024];
-  streamdeck_out_report_type_t
-      out_report[STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS];
+  // Uncached transfer buffers large enough to hold our outbound report packets
+  // (image slices with header data).
+  uint8_t drv_tx1_[sizeof(streamdeck_out_report_type_t)];
+  uint8_t drv_tx2_[sizeof(streamdeck_out_report_type_t)];
+
+  // A kinda half-arsed implementation of a ring buffer for stowing uncached
+  // outbound (image) reports until the isr has time to send them out. Used in
+  // combination with a queue of memory addresses to ensure reports get sent out
+  // eventually regardless of transfer buffer state.
+  streamdeck_out_report_type_t out_report[STREAMDECK_IMAGE_OUTPUT_BUFFERS];
   uint8_t current_ob = 0;
+
+  // Queue for uncached report memory addresses from the out_report buffers. The
+  // hid_process_out_data callback will clear up each of these as the previously
+  // sent reports succeed.
   std::queue<uint32_t> pending_out_reports;
 
   uint8_t collections_claimed = 0;
   USBHIDParser *driver_;
-  USBHost *host_;
 
   Transfer_t mytransfers[2] __attribute__((aligned(32)));
 };

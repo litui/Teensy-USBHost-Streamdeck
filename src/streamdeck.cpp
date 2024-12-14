@@ -65,6 +65,8 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
     // 15 keys on the SD MkII
     num_states = 15U;
     states = (uint8_t *)calloc(num_states, sizeof(uint8_t));
+  } else {
+    return CLAIM_NO;
   }
 
   mydevice = dev;
@@ -94,9 +96,8 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
     return false;
 
   if (num_states != report->stateCount) {
-    USBHDBGSerial.printf("Tracked number of states does not match input state "
-                         "count! Aligning for future.");
-    num_states = report->stateCount;
+    USBHDBGSerial.printf(
+        "Warning: tracked number of states does not match input state count!");
   }
 
   int16_t changed_index = -1;
@@ -121,14 +122,21 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
 }
 
 bool StreamdeckController::hid_process_out_data(const Transfer_t *transfer) {
-  Serial.printf("HID output, length: %u\n", transfer->length);
-  dump_hexbytes(transfer->buffer, transfer->length, 0);
+  Serial.printf("HID output success, length: %u\n", transfer->length);
+  if (pending_out_reports.size()) {
+    streamdeck_out_report_type_t *report = (streamdeck_out_report_type_t*) pending_out_reports.front();
+    Serial.printf("Resuming transfer of payload #%u.\n", report->payloadNumber);
+    if (driver_->sendPacket((const uint8_t *)report, 1024)) {
+      pending_out_reports.pop();
+    }
+  }
+  // dump_hexbytes(transfer->buffer, transfer->length, 0);
   return true;
 }
 
 bool StreamdeckController::hid_process_control(const Transfer_t *transfer) {
   Serial.printf("HID Control...\n");
-  dump_hexbytes(transfer->buffer, transfer->length, 0);
+  // dump_hexbytes(transfer->buffer, transfer->length, 0);
   return true;
 }
 
@@ -163,14 +171,15 @@ void StreamdeckController::reset() {
   // SET_REPORT
   // TODO: switch this to rotating buffers in case reports get sent in
   // succession
-  static streamdeck_feature_report_type_t report;
-  report.reportType = 0x03;
-  report.request = 0x02;
-  report.value = 0;
-  for (uint8_t i = 0; i < sizeof(report.filler); i++) {
-    report.filler[i] = 0;
-  }
-  setReport(report.reportType, 0, 0, &report, sizeof(report));
+  // This reset might trigger a port change, which is a problem.
+  // static streamdeck_feature_report_type_t report;
+  // report.reportType = 0x03;
+  // report.request = 0x02;
+  // report.value = 0;
+  // for (uint8_t i = 0; i < sizeof(report.filler); i++) {
+  //   report.filler[i] = 0;
+  // }
+  // setReport(report.reportType, 0, 0, &report, sizeof(report));
 
   // Reset key images
   uint8_t *temp_buffer = (uint8_t *)&out_report[current_ob];
@@ -212,7 +221,13 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
     pageCount++;
 
     if (!driver_->sendPacket((const uint8_t *)&out_report[current_ob], 1024)) {
-      Serial.println("Failed to send image payload.");
+      Serial.printf("Failed to send image payload #%u, queueing for later.\n",
+                    out_report[current_ob].payloadNumber);
+
+      // Only queue reports up to the maximum output buffer limit, minus 2 (buffers already in use).
+      if (pending_out_reports.size() < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS-2) {
+        pending_out_reports.push((uint32_t) &out_report[current_ob]);
+      }
     }
 
     current_ob = current_ob < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS - 1

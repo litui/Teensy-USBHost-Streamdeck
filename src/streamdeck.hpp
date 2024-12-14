@@ -27,8 +27,9 @@ Credit to:
 #pragma once
 #include <Arduino.h>
 #include <USBHost_t36.h>
+#include <queue>
 
-#define STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS 15U // @ 1024 bytes each
+#define STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS 15 // @ 1024 bytes each
 
 // 72 x 72 black JPEG
 const uint8_t BLANK_KEY_IMAGE[] = {
@@ -96,8 +97,14 @@ const uint8_t BLANK_KEY_IMAGE[] = {
 
 class StreamdeckController : public USBHIDInput {
 public:
-  StreamdeckController(USBHost &host) { init(); }
-  StreamdeckController(USBHost *host) { init(); }
+  StreamdeckController(USBHost &host) {
+    host_ = &host;
+    init();
+  }
+  StreamdeckController(USBHost *host) {
+    host_ = host;
+    init();
+  }
 
 public:
   void reset();
@@ -184,16 +191,16 @@ private:
   uint16_t num_states = 0;
   uint8_t *states;
 
-  uint8_t brightness = 0x41U;
-
   uint8_t drv_tx1_[1024];
   uint8_t drv_tx2_[1024];
   streamdeck_out_report_type_t
       out_report[STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS];
   uint8_t current_ob = 0;
+  std::queue<uint32_t> pending_out_reports;
 
   uint8_t collections_claimed = 0;
   USBHIDParser *driver_;
+  USBHost *host_;
 
   // See if we can contribute transfers
   Transfer_t mytransfers[8] __attribute__((aligned(32)));

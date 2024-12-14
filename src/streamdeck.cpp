@@ -26,40 +26,6 @@ Credit to:
 */
 #include "streamdeck.hpp"
 
-enum report_type_t {
-	HID_REPORT_TYPE_UNKNOWN = 0,
-	HID_REPORT_TYPE_IN = 1,
-	HID_REPORT_TYPE_OUT = 2,
-	HID_REPORT_TYPE_FEATURE = 3,
-};
-
-struct __attribute__ ((packed)) streamdeck_in_report_type_t {
-	uint8_t reportType;
-	uint8_t headerField1;
-	uint8_t headerField2;
-	uint8_t headerField3;
-	uint8_t states[508];
-};
-
-struct __attribute__ ((packed)) streamdeck_out_report_type_t {
-  uint8_t reportType;
-  uint8_t command;
-  uint8_t buttonId;
-  uint8_t isFinal;
-  uint16_t payloadLength;  // little endian
-  uint16_t payloadNumber;  // little endian
-  uint8_t payload[1016];
-};
-
-struct __attribute__ ((packed)) streamdeck_feature_report_type_t {
-  uint8_t reportType;
-  uint8_t command;
-  uint8_t value;
-  uint8_t filler[29];
-};
-
-uint8_t feature_buffer[512];
-
 void dump_hexbytes(const void *ptr, uint32_t len, uint32_t indent) {
   if (ptr == NULL || len == 0) return;
   uint32_t count = 0;
@@ -92,7 +58,7 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver, Device_t
 	// Right now, only claim the Stream Deck MkII
 	if (dev->idVendor == 0xfd9 && dev->idProduct == 0x80) {
 		// 15 keys on the SD MkII
-		num_states = 15;
+		num_states = 15U;
 		states = (uint8_t*) calloc(num_states, sizeof(uint8_t));
 	}
 
@@ -102,15 +68,13 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver, Device_t
 	driver_ = driver;
 	driver_->setTXBuffers(drv_tx1_, drv_tx2_, 0);
 
-	if (claimedFunction) (*claimedFunction)(this);
-
 	return CLAIM_INTERFACE;
 }
 
 void StreamdeckController::disconnect_collection(Device_t *dev) {
-  if (--collections_claimed == 0) {
+  if (--collections_claimed == 0U) {
 		free(states);
-		num_states = 0;
+		num_states = 0U;
     mydevice = NULL;
   }
 }
@@ -122,6 +86,11 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
 	streamdeck_in_report_type_t* report = (streamdeck_in_report_type_t*) transfer->buffer;
 	if (report->reportType != HID_REPORT_TYPE_IN)
 		return false;
+
+	if (num_states != report->stateCount) {
+		USBHDBGSerial.printf("Tracked number of states does not match input state count! Aligning for future.");
+		num_states = report->stateCount;
+	}
 
 	int16_t changed_index = -1;
 	for (uint16_t i = 0; i < num_states; i++) {
@@ -152,12 +121,61 @@ bool StreamdeckController::hid_process_out_data(const Transfer_t *transfer) {
 
 bool StreamdeckController::hid_process_control(const Transfer_t *transfer) {
 	Serial.printf("HID Control...\n");
-	// dump_hexbytes(transfer->buffer, transfer->length, 0);
-	return false;
+	dump_hexbytes(transfer->buffer, transfer->length, 0);
+	return true;
+}
+
+bool StreamdeckController::setReport(const uint8_t reportType, const uint8_t reportId, const uint8_t interface, void* report, const uint16_t length) {
+	return driver_->sendControlPacket(
+		0x21U,  // bmRequestType = 00100001, Class-specific requests
+		0x09U,  // SET_REPORT (s. 7.2.2 of DCD for USB HID v1.11)
+		(uint16_t)((reportType << 8) | reportId),
+		interface,
+		length,
+		report
+	);
 }
 
 void StreamdeckController::setBrightness(float percent) {
-	driver_->sendControlPacket(3, 8, (uint8_t)min(100, round(percent * 100.0)), 0, 0, feature_buffer);
+	// TODO: switch this to rotating buffers in case reports get sent in succession
+	static streamdeck_feature_report_type_t report;
+	report.reportType = 0x03;
+	report.request = 0x08;
+	report.value = (uint8_t)min(100, max(percent * 100, 0));
+	for (uint8_t i = 0; i < sizeof(report.filler); i++) {
+		report.filler[i] = 0;
+	}
+
+	setReport(report.reportType, 0, 0, &report, sizeof(report));
+}
+
+void StreamdeckController::reset() {
+	// SET_IDLE
+	driver_->sendControlPacket(0x21, 0xa, 0, 0, 0, nullptr);
+
+	// SET_REPORT
+	// TODO: switch this to rotating buffers in case reports get sent in succession
+	static streamdeck_feature_report_type_t report;
+	report.reportType = 0x03;
+	report.request = 0x02;
+	report.value = 0;
+	for (uint8_t i = 0; i < sizeof(report.filler); i++) {
+		report.filler[i] = 0;
+	}
+	setReport(report.reportType, 0, 0, &report, sizeof(report));
+
+	// Reset key images
+	uint8_t *temp_buffer = (uint8_t*)&out_report[current_ob];
+	temp_buffer[0] = 2U;
+	for (uint16_t i = 1; i < 1024U; i++) {
+		temp_buffer[i] = 0;
+	}
+	driver_->sendPacket(temp_buffer, 1024);
+	current_ob++;
+}
+
+void StreamdeckController::setKeyBlank(const uint16_t keyIndex) {
+	setKeyImage(keyIndex, BLANK_KEY_IMAGE, sizeof(BLANK_KEY_IMAGE));
 }
 
 void StreamdeckController::setKeyImage(const uint16_t keyIndex, const uint8_t *image, uint16_t length) {
@@ -167,45 +185,28 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex, const uint8_t *i
   // uint16_t totalPages = ceil((float)length / (float)bytesPerPage);
 
 	while (byteCount < length) {
-    streamdeck_out_report_type_t report;
-    report.reportType = HID_REPORT_TYPE_OUT;
-    report.command = 7;
-    report.buttonId = keyIndex;
+    out_report[current_ob].reportType = HID_REPORT_TYPE_OUT;
+    out_report[current_ob].command = 7;
+    out_report[current_ob].buttonId = keyIndex;
 
 		uint16_t sliceLen = min(length - byteCount, bytesPerPage);
-    report.payloadLength = sliceLen;
-    report.isFinal = sliceLen != bytesPerPage ? 1 : 0;
-    report.payloadNumber = pageCount;
+    out_report[current_ob].payloadLength = sliceLen;
+    out_report[current_ob].isFinal = sliceLen != bytesPerPage ? 1 : 0;
+    out_report[current_ob].payloadNumber = pageCount;
 
-		memcpy(report.payload, image + byteCount, sliceLen);
+		memcpy(out_report[current_ob].payload, image + byteCount, sliceLen);
     for (uint16_t i = bytesPerPage; i >= sliceLen; i--) {
-      report.payload[i] = 0;
+      out_report[current_ob].payload[i] = 0;
     }
-
-		// uint8_t report[1024U];
-		// report[0] = HID_REPORT_TYPE_OUT;  // type field
-		// report[1] = 7;                    // command field
-		// // Only an 8 bit field for keyIndex on the report.
-		// report[2] = min(255U, keyIndex);   // key field
-
-		// uint16_t sliceLen = min(length - byteCount, bytesPerPage);
-    // report[3] = sliceLen != bytesPerPage ? 1 : 0;  // final page field
-    // report[4] = (sliceLen >> 8) & 0xFFU;
-		// report[5] = sliceLen & 0xFFU;
-    // report[6] = (pageCount >> 8) & 0xFFU;
-		// report[7] = pageCount & 0xFFU;
-
-		// memcpy(report+8, image + byteCount, sliceLen);
-		// for (uint16_t i = bytesPerPage; i >= sliceLen; i--)
-		// 	report[i+8] = 0;
 
 		byteCount += sliceLen;
     pageCount++;
 
-		if(!driver_->sendPacket((const uint8_t*)&report, -1)) {
-			Serial.println("Failed.");
-			break;
+		if(!driver_->sendPacket((const uint8_t*)&out_report[current_ob], 1024)) {
+			Serial.println("Failed to send image payload.");
 		}
+
+		current_ob = current_ob < STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS-1 ? current_ob + 1 : 0;
 	}
 
 	// Set up appropriately sized buffers for transmitting data.

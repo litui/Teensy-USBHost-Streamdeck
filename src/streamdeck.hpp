@@ -28,6 +28,8 @@ Credit to:
 #include <Arduino.h>
 #include <USBHost_t36.h>
 
+#define STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS 15U  // @ 1024 bytes each
+
 // 72 x 72 black JPEG
 const uint8_t BLANK_KEY_IMAGE[] = {
 		0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -83,11 +85,41 @@ public:
   void     setKeyBlank(const uint16_t keyIndex);
 
   // Call these to attach your own function hooks
-  void     attachClaimed(void (*f)(StreamdeckController* sdc)) { claimedFunction = f; };
   void     attachSinglePress(void (*f)(StreamdeckController* sdc, const uint16_t keyIndex, const uint8_t newValue, const uint8_t oldValue)) { singleStateChangedFunction = f; }
   void     attachAnyChange(void (*f)(StreamdeckController* sdc, const uint8_t *newStates, const uint8_t *oldStates)) { anyStateChangedFunction = f; }
 
 protected:
+	enum report_type_t {
+		HID_REPORT_TYPE_UNKNOWN = 0,
+		HID_REPORT_TYPE_IN = 1,
+		HID_REPORT_TYPE_OUT = 2,
+		HID_REPORT_TYPE_FEATURE = 3,
+	};
+
+	struct __attribute__ ((packed)) streamdeck_in_report_type_t {
+		uint8_t reportType;
+		uint8_t headerField1;
+		uint16_t stateCount;
+		uint8_t states[508];
+	};
+
+	struct __attribute__ ((packed)) streamdeck_out_report_type_t {
+		uint8_t reportType;
+		uint8_t command;
+		uint8_t buttonId;
+		uint8_t isFinal;
+		uint16_t payloadLength;  // little endian
+		uint16_t payloadNumber;  // little endian
+		uint8_t payload[1016];
+	};
+
+	struct __attribute__ ((packed)) streamdeck_feature_report_type_t {
+		uint8_t reportType;
+		uint8_t request;
+		uint8_t value;
+		uint8_t filler[29];
+	};
+
   virtual hidclaim_t claim_collection(USBHIDParser *driver, Device_t *dev, uint32_t topusage);
   virtual void disconnect_collection(Device_t *dev);
   virtual bool hid_process_in_data(const Transfer_t *transfer);
@@ -99,8 +131,8 @@ protected:
 
 private:
   void init();
+	bool setReport(const uint8_t reportType, const uint8_t reportId, const uint8_t interface, void* buffer, const uint16_t bufferLength = 8U);
 
-  void (*claimedFunction)(StreamdeckController* sdc);
   void (*singleStateChangedFunction)(StreamdeckController* sdc, const uint16_t keyIndex, const uint8_t newValue, const uint8_t oldValue);
   void (*anyStateChangedFunction)(StreamdeckController* sdc, const uint8_t *newStates, const uint8_t *oldStates);
 
@@ -112,12 +144,14 @@ private:
 
   uint8_t drv_tx1_[1024];
   uint8_t drv_tx2_[1024];
+	streamdeck_out_report_type_t out_report[STREAMDECK_NUMBER_OF_IMAGE_OUTPUT_BUFFERS];
+	uint8_t current_ob = 0;
 
   uint8_t collections_claimed = 0;
   USBHIDParser *driver_;
 
   // See if we can contribute transfers
-  Transfer_t mytransfers[2] __attribute__ ((aligned(32)));
+  Transfer_t mytransfers[8] __attribute__ ((aligned(32)));
   Pipe_t mypipes[3] __attribute__ ((aligned(32)));
 };
 

@@ -27,6 +27,7 @@ Credit to:
 #include "streamdeck.hpp"
 
 void StreamdeckController::init() {
+	USBHost::contribute_Pipes(mypipes, sizeof(mypipes)/sizeof(Pipe_t));
   USBHost::contribute_Transfers(mytransfers,
                                 sizeof(mytransfers) / sizeof(Transfer_t));
   USBHIDParser::driver_ready_for_hid_collection(this);

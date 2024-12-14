@@ -212,5 +212,6 @@ private:
   uint8_t collections_claimed = 0;
   USBHIDParser *driver_;
 
-  Transfer_t mytransfers[2] __attribute__((aligned(32)));
+  Pipe_t mypipes[3] __attribute__ ((aligned(32)));
+  Transfer_t mytransfers[5] __attribute__((aligned(32)));
 };

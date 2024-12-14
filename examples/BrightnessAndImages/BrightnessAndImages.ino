@@ -36,9 +36,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
-USBHIDParser hid2(myusb);
 StreamdeckController sdc1(myusb);
-StreamdeckController sdc2(myusb);
 
 USBDriver *drivers[] = {&hid1};
 #define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))

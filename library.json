@@ -18,5 +18,19 @@
   ],
   "license": "MIT",
   "frameworks": "arduino",
-  "platforms": "teensy"
+  "platforms": "teensy",
+  "export": {
+    "include": [
+      "*.hpp"
+    ]
+  },
+  "build": {
+    "includeDir": "."
+  },
+  "headers": ["streamdeck.hpp"],
+  "dependencies": {
+    "bitbank2/JPEGENC": "^1.1.0",
+	  "bitbank2/JPEGDEC": "^1.6.2",
+    "vindar/tgx": "^1.0.3"
+  }
 }

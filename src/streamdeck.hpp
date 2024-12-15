@@ -27,12 +27,14 @@ Credit to:
 #pragma once
 #include <Arduino.h>
 #include <USBHost_t36.h>
+#include <circular_buffer.h>
 #include <queue>
 
 // This number of report buffers should be enough for 2-3 images to fully
-// buffer.
+// buffer. Try to aim for around 3-5 kBytes max per JPG (remove exif data).
 #ifndef STREAMDECK_IMAGE_OUTPUT_BUFFERS
-#define STREAMDECK_IMAGE_OUTPUT_BUFFERS 15 // @ 1024 bytes each
+#define STREAMDECK_IMAGE_OUTPUT_BUFFERS                                        \
+  8 // @ 1024 bytes each, must be exponent of 2
 #endif
 
 // 72 x 72 black JPEG
@@ -197,21 +199,23 @@ private:
   uint8_t drv_tx1_[sizeof(streamdeck_out_report_type_t)];
   uint8_t drv_tx2_[sizeof(streamdeck_out_report_type_t)];
 
-  // A kinda half-arsed implementation of a ring buffer for stowing uncached
-  // outbound (image) reports until the isr has time to send them out. Used in
-  // combination with a queue of memory addresses to ensure reports get sent out
-  // eventually regardless of transfer buffer state.
-  streamdeck_out_report_type_t out_report[STREAMDECK_IMAGE_OUTPUT_BUFFERS];
-  uint8_t current_ob = 0;
+  // A circular buffer for stowing uncached outbound (image) reports until the
+  // isr has time to send them out. This works alongside a separate queue to
+  // ensure reports get sent out eventually regardless of transfer
+  // buffer state. uint8_t out_report[sizeof(streamdeck_out_report_type_t) *
+  // STREAMDECK_IMAGE_OUTPUT_BUFFERS];
+  Circular_Buffer<uint8_t, STREAMDECK_IMAGE_OUTPUT_BUFFERS,
+                  sizeof(streamdeck_out_report_type_t)>
+      out_report;
 
-  // Queue for uncached report memory addresses from the out_report buffers. The
-  // hid_process_out_data callback will clear up each of these as the previously
-  // sent reports succeed.
+  // Separate queue for marking only pending reports to be sent.
   std::queue<uint32_t> pending_out_reports;
+
+  bool processingInData = false;
 
   uint8_t collections_claimed = 0;
   USBHIDParser *driver_;
 
-  Pipe_t mypipes[3] __attribute__ ((aligned(32)));
+  Pipe_t mypipes[3] __attribute__((aligned(32)));
   Transfer_t mytransfers[5] __attribute__((aligned(32)));
 };

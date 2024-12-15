@@ -52,3 +52,10 @@ Credit to:
 #define STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE 1U
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 
+// Optionally disable the Image Helper library. Do this if your images are all
+// pre-prepared or if you handle images being fed to the Streamdeck all on your
+// own. Default: enabled.
+#ifndef STREAMDECK_IMAGE_HELPER_ENABLE
+#define STREAMDECK_IMAGE_HELPER_ENABLE 1U
+#endif // STREAMDECK_IMAGE_HELPER_ENABLE
+

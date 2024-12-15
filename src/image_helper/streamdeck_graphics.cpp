@@ -26,7 +26,11 @@ Credit to:
 */
 #include "streamdeck_graphics.hpp"
 
+#if STREAMDECK_IMAGE_HELPER_ENABLE
+
 namespace Streamdeck {
 
 
 } // namespace Streamdeck
+
+#endif // STREAMDECK_IMAGE_HELPER_ENABLE

@@ -25,6 +25,7 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
+#include "device_specifics.hpp"
 #include "streamdeck_config.hpp"
 #include <Arduino.h>
 #include <USBHost_t36.h>
@@ -113,7 +114,13 @@ public:
   void setKeyBlank(const uint16_t keyIndex);
   void blankAllKeys();
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
-  uint16_t getNumKeys() { return num_states; };
+  uint16_t getNumKeys() {
+    if (settings) {
+      Serial.println(settings->keyCount);
+      return settings->keyCount;
+    } else
+      return 0;
+  };
   void reset();
 
   // Call these to attach your own function hooks
@@ -137,14 +144,14 @@ protected:
     HID_REPORT_TYPE_FEATURE = 3,
   };
 
-  struct __attribute__((packed)) streamdeck_in_report_type_t {
+  struct __attribute__((packed)) report_type_512_4_in_t {
     uint8_t reportType;
     uint8_t headerField1;
     uint16_t stateCount;
     uint8_t states[508];
   };
 
-  struct __attribute__((packed)) streamdeck_out_report_type_t {
+  struct __attribute__((packed)) report_type_1024_8_out_t {
     uint8_t reportType;
     uint8_t command;
     uint8_t buttonId;
@@ -154,7 +161,7 @@ protected:
     uint8_t payload[1016];
   };
 
-  struct __attribute__((packed)) streamdeck_feature_report_type_t {
+  struct __attribute__((packed)) report_type_32_3_out_t {
     uint8_t reportType;
     uint8_t request;
     uint8_t value;
@@ -190,14 +197,15 @@ private:
                                   const uint8_t *newStates,
                                   const uint8_t *oldStates);
 
-  // Number of widget/key states to track (for different Stream Deck devices)
-  uint16_t num_states = 0;
+  device_settings_t *settings = nullptr;
+
+  // Key states to track (for different Stream Deck devices)
   uint8_t *states;
 
   // Uncached transfer buffers large enough to hold our outbound report packets
   // (image slices with header data).
-  uint8_t drv_tx1_[sizeof(streamdeck_out_report_type_t)];
-  uint8_t drv_tx2_[sizeof(streamdeck_out_report_type_t)];
+  uint8_t drv_tx1_[sizeof(report_type_1024_8_out_t)];
+  uint8_t drv_tx2_[sizeof(report_type_1024_8_out_t)];
 
   // A circular buffer for stowing uncached outbound (image) reports until the
   // isr has time to send them out. This works alongside a separate queue to
@@ -205,7 +213,7 @@ private:
   // buffer state. uint8_t out_report[sizeof(streamdeck_out_report_type_t) *
   // STREAMDECK_IMAGE_OUTPUT_BUFFERS];
   Circular_Buffer<uint8_t, STREAMDECK_USBHOST_OUTPUT_BUFFERS,
-                  sizeof(streamdeck_out_report_type_t)>
+                  sizeof(report_type_1024_8_out_t)>
       out_report;
 
   // Separate queue for marking only pending reports to be sent.

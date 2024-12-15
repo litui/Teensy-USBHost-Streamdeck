@@ -41,13 +41,19 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
   if (mydevice != NULL && dev != mydevice)
     return CLAIM_NO;
 
-  // Right now, only claim the Stream Deck MkII
-  if (dev->idVendor == 0xfd9U && dev->idProduct == 0x80U) {
-    // 15 keys on the SD MkII
-    num_states = 15U;
-    states = (uint8_t *)calloc(num_states, sizeof(uint8_t));
-  } else
+  if (dev->idVendor != USB_VID_ELGATO)
     return CLAIM_NO;
+
+  for (uint8_t i = 0; i < sizeof(DeviceList)/sizeof(device_settings_t); i++) {
+    if (dev->idProduct == DeviceList[i].productId) {
+      Serial.println("Found product!");
+      settings = (device_settings_t*)&DeviceList[i];
+    }
+  }
+  if (!settings)
+    return CLAIM_NO;
+  
+  states = (uint8_t *)calloc(settings->keyCount, sizeof(uint8_t));
 
   mydevice = dev;
   collections_claimed++;
@@ -61,7 +67,7 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
 void StreamdeckController::disconnect_collection(Device_t *dev) {
   if (--collections_claimed == 0U) {
     free(states);
-    num_states = 0U;
+    settings = nullptr;
     mydevice = NULL;
   }
 }
@@ -70,13 +76,13 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
   if (transfer->length != 512U)
     return false;
 
-  streamdeck_in_report_type_t *report =
-      (streamdeck_in_report_type_t *)transfer->buffer;
+  report_type_512_4_in_t *report =
+      (report_type_512_4_in_t *)transfer->buffer;
   if (report->reportType != HID_REPORT_TYPE_IN)
     return false;
 
   int16_t changed_index = -1;
-  for (uint16_t i = 0; i < num_states; i++) {
+  for (uint16_t i = 0; i < settings->keyCount; i++) {
     // Report differences in key states.
     if (report->states[i] != states[i]) {
       // Serial.printf("hid_process_in_data called: key %u changed to state
@@ -93,19 +99,19 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
       // Hook to user function.
       anyStateChangedFunction(this, report->states, states);
   }
-  memcpy(states, report->states, num_states);
+  memcpy(states, report->states, settings->keyCount);
   return true;
 }
 
 bool StreamdeckController::hid_process_out_data(const Transfer_t *transfer) {
   // USBHDBGSerial.printf("HID output success, length: %u\n", transfer->length);
   if (!pending_out_reports.empty()) {
-    streamdeck_out_report_type_t *report =
-        (streamdeck_out_report_type_t *)pending_out_reports.front();
+    report_type_1024_8_out_t *report =
+        (report_type_1024_8_out_t *)pending_out_reports.front();
     // USBHDBGSerial.printf("Resuming transfer of payload #%u.\n",
     // report->payloadNumber);
     if (driver_->sendPacket((const uint8_t *)report,
-                            sizeof(streamdeck_out_report_type_t))) {
+                            sizeof(report_type_1024_8_out_t))) {
       pending_out_reports.pop();
     }
   }
@@ -128,7 +134,7 @@ bool StreamdeckController::setReport(const uint8_t reportType,
 }
 
 void StreamdeckController::setBrightness(float percent) {
-  static streamdeck_feature_report_type_t report;
+  static report_type_32_3_out_t report;
   report.reportType = 0x03;
   report.request = 0x08;
   report.value = (uint8_t)min(100, max(percent * 100, 0));
@@ -187,7 +193,7 @@ void StreamdeckController::setKeyBlank(const uint16_t keyIndex) {
 }
 
 void StreamdeckController::blankAllKeys() {
-  for (uint16_t i = 0; i < num_states; i++) {
+  for (uint16_t i = 0; i < settings->keyCount; i++) {
     setKeyBlank(i);
   }
   delay(5);
@@ -197,7 +203,7 @@ void StreamdeckController::blankAllKeys() {
 // Sets a jpeg image of the given length to the given key
 void StreamdeckController::setKeyImage(const uint16_t keyIndex,
                                        const uint8_t *image, uint16_t length) {
-  const uint16_t bytesPerPage = sizeof(streamdeck_out_report_type_t) - 8;
+  const uint16_t bytesPerPage = sizeof(report_type_1024_8_out_t) - 8;
   uint16_t pageCount = 0;
   uint16_t byteCount = 0;
 
@@ -212,7 +218,7 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
   // Logic adapted from:
   // - https://den.dev/blog/reverse-engineering-stream-deck/
   while (byteCount < length) {
-    streamdeck_out_report_type_t report;
+    report_type_1024_8_out_t report;
 
     // Serial.printf("Page count: %u\n", pageCount);
     report.reportType = HID_REPORT_TYPE_OUT;

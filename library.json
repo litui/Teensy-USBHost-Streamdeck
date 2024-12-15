@@ -31,6 +31,7 @@
   "dependencies": {
     "bitbank2/JPEGENC": "^1.1.0",
 	  "bitbank2/JPEGDEC": "^1.6.2",
-    "vindar/tgx": "^1.0.3"
+    "vindar/tgx": "^1.0.3",
+    "tgx-font": "https://github.com/vindar/tgx-font#f776e78b6da3835681c4a7aaf80ffad41edc41fb"
   }
 }

@@ -25,7 +25,12 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
+#include "streamdeck_config.hpp"
+
+#if STREAMDECK_IMAGE_HELPER_ENABLE
 
 namespace Streamdeck {
 
 } // namespace Streamdeck
+
+#endif // STREAMDECK_IMAGE_HELPER_ENABLE

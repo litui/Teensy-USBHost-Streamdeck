@@ -26,7 +26,9 @@ Credit to:
 */
 #pragma once
 #include "usbhost_driver/streamdeck_usb.hpp"
+#if STREAMDECK_IMAGE_HELPER_ENABLE
 #include "image_helper/streamdeck_graphics.hpp"
+#endif // STREAMDECK_IMAGE_HELPER_ENABLE
 
 namespace Streamdeck {
 

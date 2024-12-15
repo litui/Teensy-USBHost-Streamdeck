@@ -25,20 +25,15 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
+#include "streamdeck_config.hpp"
 #include <Arduino.h>
 #include <USBHost_t36.h>
 #include <circular_buffer.h>
 #include <queue>
 
-// This number of report buffers should be enough for 2-3 images to fully
-// buffer. Try to aim for around 3-5 kBytes max per JPG (remove exif data).
-#ifndef STREAMDECK_IMAGE_OUTPUT_BUFFERS
-#define STREAMDECK_IMAGE_OUTPUT_BUFFERS                                        \
-  8 // @ 1024 bytes each, must be exponent of 2
-#endif
-
 namespace Streamdeck {
 
+#if STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 // 72 x 72 black JPEG
 const uint8_t BLANK_KEY_IMAGE[] = {
     0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -102,6 +97,7 @@ const uint8_t BLANK_KEY_IMAGE[] = {
     0x02, 0x8a, 0x28, 0xa0, 0x02, 0x8a, 0x28, 0xa0, 0x02, 0x8a, 0x28, 0xa0,
     0x02, 0x8a, 0x28, 0xa0, 0x02, 0x8a, 0x28, 0xa0, 0x02, 0x8a, 0x28, 0xa0,
     0x02, 0x8a, 0x28, 0xa0, 0x0f, 0xff, 0xd9};
+#endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 
 class StreamdeckController : public USBHIDInput {
 public:
@@ -113,8 +109,10 @@ public:
   void flushImageReports();
   void setKeyImage(const uint16_t keyIndex, const uint8_t *image,
                    const uint16_t length);
+#if STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   void setKeyBlank(const uint16_t keyIndex);
   void blankAllKeys();
+#endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   uint16_t getNumKeys() { return num_states; };
   void reset();
 
@@ -206,7 +204,7 @@ private:
   // ensure reports get sent out eventually regardless of transfer
   // buffer state. uint8_t out_report[sizeof(streamdeck_out_report_type_t) *
   // STREAMDECK_IMAGE_OUTPUT_BUFFERS];
-  Circular_Buffer<uint8_t, STREAMDECK_IMAGE_OUTPUT_BUFFERS,
+  Circular_Buffer<uint8_t, STREAMDECK_USBHOST_OUTPUT_BUFFERS,
                   sizeof(streamdeck_out_report_type_t)>
       out_report;
 

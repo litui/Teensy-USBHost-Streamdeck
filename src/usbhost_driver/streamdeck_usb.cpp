@@ -42,7 +42,7 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
     return CLAIM_NO;
 
   // Right now, only claim the Stream Deck MkII
-  if (dev->idVendor == 0xfd9 && dev->idProduct == 0x80) {
+  if (dev->idVendor == 0xfd9U && dev->idProduct == 0x80U) {
     // 15 keys on the SD MkII
     num_states = 15U;
     states = (uint8_t *)calloc(num_states, sizeof(uint8_t));
@@ -143,6 +143,7 @@ void StreamdeckController::reset() {
   // SET_IDLE
   driver_->sendControlPacket(0x21, 0xa, 0, 0, 0, nullptr);
 
+#if STREAMDECK_USBHOST_ENABLE_RESET
   // SET_REPORT
   // This reset routine triggers a port change, which is a problem for
   // USBHost_t36.
@@ -154,6 +155,7 @@ void StreamdeckController::reset() {
     report.filler[i] = 0;
   }
   setReport(report.reportType, 0, 0, &report, sizeof(report));
+#endif // STREAMDECK_USBHOST_ENABLE_RESET
 }
 
 // Sends a blank outbound report to the device and empties the pending queue.
@@ -178,6 +180,7 @@ void StreamdeckController::flushImageReports() {
   // sizeof(report));
 }
 
+#if STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 // Sets a blank (black) image to the given key
 void StreamdeckController::setKeyBlank(const uint16_t keyIndex) {
   setKeyImage(keyIndex, BLANK_KEY_IMAGE, sizeof(BLANK_KEY_IMAGE));
@@ -189,6 +192,7 @@ void StreamdeckController::blankAllKeys() {
   }
   delay(5);
 }
+#endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 
 // Sets a jpeg image of the given length to the given key
 void StreamdeckController::setKeyImage(const uint16_t keyIndex,
@@ -233,12 +237,9 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
     if (!driver_->sendPacket((const uint8_t *)out_report.peek_back(),
                              sizeof(report))) {
 
-      // Only queue reports up to the maximum output buffer limit, minus 2
-      // (buffers already in use).
-      if (pending_out_reports.size() < STREAMDECK_IMAGE_OUTPUT_BUFFERS - 2) {
-        pending_out_reports.push((uint32_t)out_report.peek_back());
-      }
+      pending_out_reports.push((uint32_t)out_report.peek_back());
     } else {
+      // Delay inserted to ensure the ISR has time to process.
       delay(1);
     }
   }

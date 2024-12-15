@@ -25,3 +25,7 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
+
+namespace Streamdeck {
+
+} // namespace Streamdeck

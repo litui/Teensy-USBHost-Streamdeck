@@ -26,6 +26,8 @@ Credit to:
 */
 #include "streamdeck_usb.hpp"
 
+namespace Streamdeck {
+
 void StreamdeckController::init() {
   USBHost::contribute_Pipes(mypipes, sizeof(mypipes) / sizeof(Pipe_t));
   USBHost::contribute_Transfers(mytransfers,
@@ -142,7 +144,8 @@ void StreamdeckController::reset() {
   driver_->sendControlPacket(0x21, 0xa, 0, 0, 0, nullptr);
 
   // SET_REPORT
-  // This reset routine triggers a port change, which is a problem for USBHost_t36.
+  // This reset routine triggers a port change, which is a problem for
+  // USBHost_t36.
   static streamdeck_feature_report_type_t report;
   report.reportType = 0x03;
   report.request = 0x02;
@@ -240,3 +243,5 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
     }
   }
 }
+
+} // namespace Streamdeck

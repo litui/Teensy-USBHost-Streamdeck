@@ -37,6 +37,8 @@ Credit to:
   8 // @ 1024 bytes each, must be exponent of 2
 #endif
 
+namespace Streamdeck {
+
 // 72 x 72 black JPEG
 const uint8_t BLANK_KEY_IMAGE[] = {
     0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -219,3 +221,5 @@ private:
   Pipe_t mypipes[3] __attribute__((aligned(32)));
   Transfer_t mytransfers[5] __attribute__((aligned(32)));
 };
+
+} // namespace Streamdeck

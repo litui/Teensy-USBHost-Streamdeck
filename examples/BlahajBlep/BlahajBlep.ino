@@ -38,7 +38,7 @@ namespace USB {
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
-StreamdeckController sdc1(myusb);
+Streamdeck::StreamdeckController sdc1(myusb);
 
 USBDriver *drivers[] = {&hid1};
 #define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))
@@ -54,6 +54,7 @@ bool hid_driver_active[CNT_HIDDEVICES] = {false};
 void init() { myusb.begin(); }
 
 void tick() {
+  using namespace Streamdeck;
   myusb.Task();
 
   for (uint8_t i = 0; i < CNT_DEVICES; i++) {
@@ -113,7 +114,7 @@ void tick() {
   }
 }
 
-void buttonPressed(StreamdeckController *sdc, uint16_t keyIndex,
+void buttonPressed(Streamdeck::StreamdeckController *sdc, uint16_t keyIndex,
                    uint8_t newValue, uint8_t oldValue) {
   if (newValue == 1) {
     sdc->setKeyImage(keyIndex, image_pressed, sizeof(image_pressed));

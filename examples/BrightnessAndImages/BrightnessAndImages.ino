@@ -36,7 +36,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
-StreamdeckController sdc1(myusb);
+Streamdeck::StreamdeckController sdc1(myusb);
 
 USBDriver *drivers[] = {&hid1};
 #define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))
@@ -52,6 +52,7 @@ bool hid_driver_active[CNT_HIDDEVICES] = {false};
 void setup() { myusb.begin(); }
 
 void loop() {
+  using namespace Streamdeck;
   myusb.Task();
 
   for (uint8_t i = 0; i < CNT_DEVICES; i++) {
@@ -113,7 +114,7 @@ void loop() {
 
 // This is the button pressed callback function, attached in loop() when the
 // streamdeck is connected.
-void buttonPressed(StreamdeckController *sdc, uint16_t keyIndex,
+void buttonPressed(Streamdeck::StreamdeckController *sdc, uint16_t keyIndex,
                    uint8_t newValue, uint8_t oldValue) {
   if (newValue == 1) {
     Serial.printf("Button %u pressed!\n", keyIndex);

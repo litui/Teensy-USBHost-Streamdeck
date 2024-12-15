@@ -24,10 +24,4 @@ Credit to:
    dean [at] fourwalledcubicle [dot] com
          www.fourwalledcubicle.com
 */
-#pragma once
-#include "usbhost_driver/streamdeck_usb.hpp"
-#include "image_helper/streamdeck_graphics.hpp"
-
-namespace Streamdeck {
-
-} // namespace Streamdeck
+#include "streamdeck_graphics.hpp"

@@ -24,6 +24,7 @@ Credit to:
    dean [at] fourwalledcubicle [dot] com
          www.fourwalledcubicle.com
 */
+#pragma once
 #include <Arduino.h>
 
 #define USB_VID_ELGATO 0x0fd9U
@@ -73,6 +74,18 @@ struct device_settings_t {
 
 // For right now, only supporting devices with JPEG image format.
 const device_settings_t DeviceList[] = {
+    {.productId = USB_PID_STREAMDECK_ORIGINAL_V2,
+     .keyCount = 15,
+     .keyCols = 5,
+     .keyRows = 3,
+     .keyWidth = 72,
+     .keyHeight = 72,
+     .imageFormat = IMAGE_FORMAT_JPEG,
+     .keyFlipH = true,
+     .keyFlipV = true,
+     .keyRotation = ROTATE_NONE,
+     .imageReportLength = 1024,
+     .imageReportHeaderLength = 8},
     {.productId = USB_PID_STREAMDECK_MK2,
      .keyCount = 15,
      .keyCols = 5,

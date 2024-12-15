@@ -26,10 +26,15 @@ Credit to:
 */
 #pragma once
 #include "streamdeck_config.hpp"
+#include "device_specifics.hpp"
+#include <Arduino.h>
+#include <tgx.h>
 
 #if STREAMDECK_IMAGE_HELPER_ENABLE
 
 namespace Streamdeck {
+
+size_t createKeyJpeg(const device_settings_t *settings, tgx::RGB565 colour, uint8_t *buffer, size_t bufferSize);
 
 } // namespace Streamdeck
 

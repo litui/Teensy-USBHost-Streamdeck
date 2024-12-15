@@ -113,6 +113,7 @@ public:
 #if STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   void setKeyBlank(const uint16_t keyIndex);
   void blankAllKeys();
+  device_settings_t* getSettings() { return settings; }
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   uint16_t getNumKeys() {
     if (settings) {

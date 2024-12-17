@@ -1,6 +1,6 @@
 {
   "name": "Teensy-USBHost-Streamdeck",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Streamdeck add-on controllers for Teensy4.x USBHost_t36 library.",
   "keywords": "streamdeck",
   "repository":

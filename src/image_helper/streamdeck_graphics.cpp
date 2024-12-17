@@ -29,7 +29,10 @@ Credit to:
 
 #include <Entropy.h>
 
-const tgx::Shader LOADED_SHADERS = tgx::SHADER_ORTHO | tgx::SHADER_PERSPECTIVE | tgx::SHADER_ZBUFFER | tgx::SHADER_FLAT | tgx::SHADER_TEXTURE_BILINEAR | tgx::SHADER_TEXTURE_WRAP_POW2;
+const tgx::Shader LOADED_SHADERS = tgx::SHADER_ORTHO | tgx::SHADER_PERSPECTIVE |
+                                   tgx::SHADER_ZBUFFER | tgx::SHADER_FLAT |
+                                   tgx::SHADER_TEXTURE_BILINEAR |
+                                   tgx::SHADER_TEXTURE_WRAP_POW2;
 
 namespace Streamdeck {
 
@@ -101,7 +104,7 @@ void Image::blitWithScalingAndAutorotation(tgx::Image<tgx::RGB565> srcImg) {
                             : (float)height_ / (float)srcImg.height();
 
     im_.blitScaledRotated(srcImg, tempCentre, thisCentre, scaleFactor,
-                      autoRotation);
+                          autoRotation);
 
     // If the image is the same size or smaller, just blit it into place,
     // centred.
@@ -218,9 +221,10 @@ bool Image::importJpegRandom(const char *directory) {
 }
 #endif // STREAMDECK_IMAGE_HELPER_USE_SD
 
-bool Image::importJpegRandom(uint8_t *arrayOfJpgs[], uint16_t sizes[], size_t jpgCount) {
+bool Image::importJpegRandom(uint8_t *arrayOfJpgs[], uint16_t sizes[],
+                             size_t jpgCount) {
   size_t randPick = Entropy.random(jpgCount);
-  uint8_t* element = arrayOfJpgs[randPick];
+  uint8_t *element = arrayOfJpgs[randPick];
   uint16_t size = sizes[randPick];
   return importJpeg(element, size);
 }
@@ -229,13 +233,15 @@ bool Image::sendToKey(StreamdeckController *sdc, uint16_t keyIndex) {
   // Allocate
   uint8_t *tempJpgBuffer =
       (uint8_t *)calloc(STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE, 1);
-  size_t jpgSize = exportJpeg(tempJpgBuffer, STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE);
+  size_t jpgSize =
+      exportJpeg(tempJpgBuffer, STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE);
   sdc->setKeyImage(keyIndex, tempJpgBuffer, jpgSize);
   free(tempJpgBuffer);
   return true;
 }
 
-void Image::transform(float scaleFactor, float rotationDegrees, RGB565 backgroundColour) {
+void Image::transform(float scaleFactor, float rotationDegrees,
+                      RGB565 backgroundColour) {
   // Allocate same-sized framebuffer for temporary holding of the image
   RGB565 *tempFb = (RGB565 *)malloc(width_ * height_ * sizeof(RGB565));
   tgx::Image<tgx::RGB565> tempImg(tempFb, width_, height_);

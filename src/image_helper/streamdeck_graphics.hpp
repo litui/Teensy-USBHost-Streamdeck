@@ -82,7 +82,8 @@ public:
 
   // Import
   bool importJpeg(const uint8_t *inBuffer, const uint16_t inLength);
-  bool importJpegRandom(uint8_t *arrayOfJpgs[], uint16_t sizes[], size_t jpgCount);
+  bool importJpegRandom(uint8_t *arrayOfJpgs[], uint16_t sizes[],
+                        size_t jpgCount);
   // bool importPng(const uint8_t* buffer, const uint16_t bufferLen);
 #if STREAMDECK_IMAGE_HELPER_USE_SD
   bool importJpeg(File file);
@@ -91,7 +92,7 @@ public:
   // bool importPng(File file);
   // bool importPng(const char* path);
 #endif // STREAMDECK_IMAGE_HELPER_USE_SD
-  
+
   // Export
   size_t exportJpeg(uint8_t *outBuffer, uint16_t outLength);
 
@@ -99,8 +100,10 @@ public:
   bool sendToKey(StreamdeckController *sdc, uint16_t keyIndex);
 
   // Graphical manipulations
-  void transform(float scaleFactor, float rotationDegrees, RGB565 backgroundColour = tgx::RGB565_Black);
-  void rotate3d(float xRotationDegrees, float yRotationDegrees, float zRotationDegrees);
+  void transform(float scaleFactor, float rotationDegrees,
+                 RGB565 backgroundColour = tgx::RGB565_Black);
+  void rotate3d(float xRotationDegrees, float yRotationDegrees,
+                float zRotationDegrees);
 
 private:
   tgx::Image<tgx::RGB565> im_;

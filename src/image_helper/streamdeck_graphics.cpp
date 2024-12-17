@@ -27,33 +27,83 @@ Credit to:
 #include "streamdeck_graphics.hpp"
 #if STREAMDECK_IMAGE_HELPER_ENABLE
 
+#include <Entropy.h>
 #include <JPEGDEC.h>
 #include <JPEGENC.h>
 #include <PNGdec.h>
-#include <circular_buffer.h>
 
 JPEGENC jpgEncoder;
+JPEGDEC jpgDecoder;
+PNG pngDecoder;
 
 namespace Streamdeck {
-size_t createKeyJpeg(const device_settings_t *settings, tgx::RGB565 colour, uint8_t *buffer, size_t bufferSize) {
+
+tgx::RGB565 *outboundFrameBuffer;
+tgx::Image<tgx::RGB565> outboundSprite;
+
+size_t createKeyJpeg(const device_settings_t *settings, tgx::RGB565 colour,
+                     uint8_t *buffer, size_t bufferSize) {
   JPEGENCODE jpe;
 
   const uint16_t x = settings->keyHeight, y = settings->keyWidth;
-  uint16_t fb[x * y];
+  tgx::RGB565 fb[x * y];
 
   tgx::Image<tgx::RGB565> im(fb, x, y);
   im.fillScreen(colour);
 
   jpgEncoder.open(buffer, bufferSize);
-  jpgEncoder.encodeBegin(&jpe, x, y, JPEGE_PIXEL_RGB565, JPEGE_SUBSAMPLE_420, JPEGE_Q_HIGH);
-  jpgEncoder.addFrame(&jpe, (uint8_t*)fb, 16);
+  jpgEncoder.encodeBegin(&jpe, x, y, JPEGE_PIXEL_RGB565, JPEGE_SUBSAMPLE_420,
+                         JPEGE_Q_HIGH);
+  jpgEncoder.addFrame(&jpe, (uint8_t *)fb, 72);
   size_t dataSize = jpgEncoder.close();
-
-  Serial.printf("Jpeg encoded, size: %lu\n", dataSize);
 
   return dataSize;
 }
 
+size_t autoTransformJpeg(const device_settings_t *settings, uint8_t *inBuffer,
+                         size_t inBufSize, uint8_t *outBuffer,
+                         size_t outBufSize) {
+  return rotateAndScaleJpeg(settings, inBuffer, inBufSize, outBuffer, outBufSize, settings->keyRotation*90, 1.0);
+}
+
+size_t flipJpeg(const device_settings_t *settings, uint8_t *inBuffer,
+                          size_t inBufSize, uint8_t *outBuffer,
+                          size_t outBufSize, bool left, bool right) {
+  // TODO: figure out how flipping is going to work.
+}
+
+size_t rotateAndScaleJpeg(const device_settings_t *settings, uint8_t *inBuffer,
+                          size_t inBufSize, uint8_t *outBuffer,
+                          size_t outBufSize, float degrees, float scale) {
+  const uint16_t x = settings->keyHeight, y = settings->keyWidth;
+  tgx::RGB565 mainFrameBuffer[x * y];
+  tgx::Image<tgx::RGB565> im(mainFrameBuffer, x, y);
+
+  outboundFrameBuffer = (tgx::RGB565 *)calloc(outBufSize, sizeof(tgx::RGB565));
+  outboundSprite = tgx::Image<tgx::RGB565>(outboundFrameBuffer, x, y);
+  im.fillScreen(tgx::RGB565_Black);
+  outboundSprite.fillScreen(tgx::RGB565_Black);
+
+  jpgDecoder.openRAM(inBuffer, inBufSize, TGX_JPEGDraw);
+
+  if (!outboundSprite.JPEGDecode(jpgDecoder, tgx::iVec2(0, 0))) {
+    free(outboundFrameBuffer);
+    return 0;
+  }
+
+  im.blitScaledRotated(outboundSprite, tgx::iVec2(35, 35), tgx::iVec2(35, 35),
+                       scale, degrees);
+
+  free(outboundFrameBuffer);
+
+  JPEGENCODE jpe;
+
+  jpgEncoder.open(outBuffer, outBufSize);
+  jpgEncoder.encodeBegin(&jpe, x, y, JPEGE_PIXEL_RGB565, JPEGE_SUBSAMPLE_444,
+                         JPEGE_Q_HIGH);
+  jpgEncoder.addFrame(&jpe, (uint8_t *)mainFrameBuffer, 144);
+  return jpgEncoder.close();
+}
 
 } // namespace Streamdeck
 

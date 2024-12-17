@@ -35,6 +35,8 @@ Credit to:
 namespace Streamdeck {
 
 size_t createKeyJpeg(const device_settings_t *settings, tgx::RGB565 colour, uint8_t *buffer, size_t bufferSize);
+size_t rotateAndScaleJpeg(const device_settings_t *settings, uint8_t *inBuffer, size_t inBufSize, uint8_t *outBuffer, size_t outBufSize, float degrees, float scale);
+size_t autoTransformJpeg(const device_settings_t *settings, uint8_t *inBuffer, size_t inBufSize, uint8_t *outBuffer, size_t outBufSize);
 
 } // namespace Streamdeck
 

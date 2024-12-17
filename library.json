@@ -1,6 +1,6 @@
 {
   "name": "Teensy-USBHost-Streamdeck",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Streamdeck add-on controllers for Teensy4.x USBHost_t36 library.",
   "keywords": "streamdeck",
   "repository":
@@ -30,9 +30,7 @@
   "headers": ["streamdeck.hpp"],
   "dependencies": {
     "bitbank2/JPEGENC": "^1.1.0",
-	  "bitbank2/JPEGDEC": "^1.6.2",
-    "bitbank2/PNGdec": "^1.0.3",
-    "vindar/tgx": "^1.0.3",
-    "tgx-font": "https://github.com/vindar/tgx-font#f776e78b6da3835681c4a7aaf80ffad41edc41fb"
+    "bitbank2/JPEGDEC": "^1.6.2",
+    "vindar/tgx": "^1.0.3"
   }
 }

@@ -2,6 +2,8 @@
 
 This is an add-on library for supporting the Stream Deck V2, MkII, and (probably) XL on the Teensy 4.x with the included (no need to install) [USBHost_t36](https://github.com/PaulStoffregen/USBHost_t36/) core library.
 
+![Streamdeck with Blobhaj images](assets/streamdeck_blobhaj.jpg)
+
 ## USBHost Usage:
 
 There are two hook points you can add your own callbacks for:

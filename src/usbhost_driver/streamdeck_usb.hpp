@@ -28,6 +28,7 @@ Credit to:
 #include "device_specifics.hpp"
 #include "streamdeck_config.hpp"
 #include <Arduino.h>
+#include <Metro.h>
 #include <USBHost_t36.h>
 #include <circular_buffer.h>
 #include <queue>
@@ -100,6 +101,14 @@ const uint8_t BLANK_KEY_IMAGE[] = {
     0x02, 0x8a, 0x28, 0xa0, 0x0f, 0xff, 0xd9};
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 
+struct keyState_t {
+  uint8_t state;
+  uint8_t lastState;
+  bool changed;
+  uint32_t changedTime;
+  bool holdResolved;
+};
+
 class StreamdeckController : public USBHIDInput {
 public:
   StreamdeckController(USBHost &host) { init(); }
@@ -113,7 +122,7 @@ public:
 #if STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   void setKeyBlank(const uint16_t keyIndex);
   void blankAllKeys();
-  device_settings_t* getSettings() { return settings; }
+  device_settings_t *getSettings() { return settings; }
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   uint16_t getNumKeys() {
     if (settings) {
@@ -131,10 +140,15 @@ public:
     singleStateChangedFunction = f;
   }
   void attachAnyChange(void (*f)(StreamdeckController *sdc,
-                                 const uint8_t *newStates,
-                                 const uint8_t *oldStates)) {
+                                 keyState_t *states)) {
     anyStateChangedFunction = f;
   }
+  void attachSingleKeyHeld(void (*f)(StreamdeckController *sdc,
+                                     const uint16_t keyIndex)) {
+    singleKeyHeldFunction = f;
+  }
+
+  void Task();
 
 protected:
   enum report_type_t {
@@ -194,13 +208,14 @@ private:
                                      const uint8_t newValue,
                                      const uint8_t oldValue);
   void (*anyStateChangedFunction)(StreamdeckController *sdc,
-                                  const uint8_t *newStates,
-                                  const uint8_t *oldStates);
+                                  keyState_t *states);
+  void (*singleKeyHeldFunction)(StreamdeckController *sdc,
+                                const uint16_t keyIndex);
 
   device_settings_t *settings = nullptr;
 
   // Key states to track (for different Stream Deck devices)
-  uint8_t *states;
+  keyState_t *states;
 
   // Uncached transfer buffers large enough to hold our outbound report packets
   // (image slices with header data).

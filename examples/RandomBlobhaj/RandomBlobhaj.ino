@@ -111,6 +111,8 @@ void loop() {
     }
     if (hid_driver_active[i]) {
       StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
+      sdc->Task();
+
       Streamdeck::Image im(sdc->getSettings());
       if (im.importJpegRandom((uint8_t **)blobhaj, blobhaj_sizes,
                               BLOBHAJ_COUNT)) {

@@ -109,6 +109,10 @@ void loop() {
         }
       }
     }
+    if (hid_driver_active[i]) {
+      StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
+      sdc->Task();
+    }
   }
 }
 

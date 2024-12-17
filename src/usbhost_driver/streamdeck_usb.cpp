@@ -46,15 +46,16 @@ hidclaim_t StreamdeckController::claim_collection(USBHIDParser *driver,
 
   for (uint8_t i = 0; i < sizeof(DeviceList)/sizeof(device_settings_t); i++) {
     if (dev->idProduct == DeviceList[i].productId) {
-      Serial.println("Found product!");
+      // Serial.println("Found product!");
       settings = (device_settings_t*)&DeviceList[i];
     }
   }
   if (!settings)
     return CLAIM_NO;
   
-  states = (uint8_t *)calloc(settings->keyCount, sizeof(uint8_t));
-
+  // Reserve memory in the correct counts for state tracking
+  states = (keyState_t*) calloc(settings->keyCount, sizeof(keyState_t));
+  
   mydevice = dev;
   collections_claimed++;
 
@@ -81,23 +82,16 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
   if (report->reportType != HID_REPORT_TYPE_IN)
     return false;
 
-  int16_t changed_index = -1;
   for (uint16_t i = 0; i < settings->keyCount; i++) {
     // Report differences in key states.
-    if (report->states[i] != states[i]) {
-      // Serial.printf("hid_process_in_data called: key %u changed to state
-      // %u\n", i, report->states[i]);
-      if (singleStateChangedFunction)
-        // Hook to user function.
-        singleStateChangedFunction(this, i, report->states[i], states[i]);
-      changed_index = i;
+    if (report->states[i] != states[i].state) {
+      // Track time that a key was pressed.
+      states[i].changedTime = millis();
+      states[i].lastState = states[i].state;
+      states[i].state = report->states[i];
+      states[i].changed = true;
+      states[i].holdResolved = false;
     }
-  }
-  if (changed_index > -1) {
-    // USBHDBGSerial.printf("States changed! index %d\n", changed_index);
-    if (anyStateChangedFunction)
-      // Hook to user function.
-      anyStateChangedFunction(this, report->states, states);
   }
   memcpy(states, report->states, settings->keyCount);
   return true;
@@ -249,6 +243,44 @@ void StreamdeckController::setKeyImage(const uint16_t keyIndex,
       delay(1);
     }
   }
+}
+
+// This task needs to run frequently to trigger timed hooks
+void StreamdeckController::Task() {
+  bool changeOccurred = false;
+  uint32_t currentTime = millis();
+  for (uint16_t key = 0; key < settings->keyCount; key++) {
+    if (states[key].changed) {
+      changeOccurred = true;
+
+      // Serial.println("Processed key change.");
+      if (singleStateChangedFunction)
+        // Hook to simple state changed function.
+        singleStateChangedFunction(this, key, states[key].state, states[key].lastState);
+    }
+
+    // Track keys held longer than 1 second.
+    if (states[key].state == 1 && currentTime > states[key].changedTime + 1000) {
+      if (!states[key].holdResolved) {
+        states[key].holdResolved = true;
+        // Serial.println("Processed key held.");
+        if (singleKeyHeldFunction) {
+          singleKeyHeldFunction(this, key);
+        }
+      }
+    }
+  }
+
+  if (changeOccurred && anyStateChangedFunction) {
+    changeOccurred = false;
+    // Hook to user function.
+    anyStateChangedFunction(this, states);
+    // Serial.println("Processed any key changed.");
+  }
+
+  // iterate again to kill the changed flag.
+  for (uint16_t key = 0; key < settings->keyCount; key++)
+      states[key].changed = false;
 }
 
 } // namespace Streamdeck

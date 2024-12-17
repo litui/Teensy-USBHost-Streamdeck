@@ -6,9 +6,10 @@ This is an add-on library for supporting the Stream Deck V2, MkII, and (probably
 
 ## USBHost Usage:
 
-There are two hook points you can add your own callbacks for:
+There are three "hook" points you can add your own callbacks for:
 * Single key press/release hook - `void attachSinglePress(void (*f)(StreamdeckController *sdc, const uint16_t keyIndex, const uint8_t newValue, const uint8_t oldValue))`
 * Press/release hook showing all key states at once - `void attachAnyChange(void (*f)(StreamdeckController *sdc, const uint8_t *newStates, const uint8_t *oldStates))`
+* Single key hold (not released) hook - `void attachSingleKeyHeld(void (*f)(StreamdeckController *sdc, const uint16_t keyIndex))`
 
 There are a handful of useful functions you can call from your script when the controller is attached/active:
 * `void setBrightness(float percent)` - sets brightness; percent values are floats between 0 and 1
@@ -18,6 +19,8 @@ There are a handful of useful functions you can call from your script when the c
 * `void reset()` - issues a reset! Don't do this for now; it irrevocably resets the pipes
 * `void flushImageReports()` - clears the pending queue and sends an empty outbound report to reset counters on the Streamdeck [this also isn't working right, but I haven't found a need for it].
 * `void blankAllKeys();` - shortcut to set all keys to blank (black)
+
+The `.Task()` function needs to be run on every iteration of the loop to be able to catch all the input hooks.
 
 ## Image Helper Usage:
 

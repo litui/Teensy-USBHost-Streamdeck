@@ -59,3 +59,13 @@ Credit to:
 #define STREAMDECK_IMAGE_HELPER_ENABLE 1U
 #endif // STREAMDECK_IMAGE_HELPER_ENABLE
 
+#ifndef STREAMDECK_IMAGE_HELPER_USE_SD
+#define STREAMDECK_IMAGE_HELPER_USE_SD 1U
+#endif // STREAMDECK_IMAGE_HELPER_USE_SD
+
+// This value estimates how large the outgoing JPG to the streamdeck might be.
+// This space is calloc'd and occupied only temporarily before it's loaded into
+// the outbound report and transfer buffers.
+#ifndef STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE
+#define STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE 10000
+#endif // STREAMDECK_IMAGE_HELPER_OUT_BUFFER_SIZE

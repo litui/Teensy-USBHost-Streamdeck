@@ -117,7 +117,6 @@ public:
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
   uint16_t getNumKeys() {
     if (settings) {
-      Serial.println(settings->keyCount);
       return settings->keyCount;
     } else
       return 0;

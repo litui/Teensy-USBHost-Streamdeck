@@ -25,18 +25,104 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
-#include "streamdeck_config.hpp"
 #include "device_specifics.hpp"
+#include "streamdeck_config.hpp"
+#include "usbhost_driver/streamdeck_usb.hpp"
 #include <Arduino.h>
-#include <tgx.h>
 
 #if STREAMDECK_IMAGE_HELPER_ENABLE
 
+#include <JPEGDEC.h>
+#include <JPEGENC.h>
+#include <PNGdec.h>
+#include <tgx.h>
+
+#if STREAMDECK_IMAGE_HELPER_USE_SD
+#include <SD.h>
+#endif // STREAMDECK_IMAGE_HELPER_USE_SD
+
 namespace Streamdeck {
 
-size_t createKeyJpeg(const device_settings_t *settings, tgx::RGB565 colour, uint8_t *buffer, size_t bufferSize);
-size_t rotateAndScaleJpeg(const device_settings_t *settings, uint8_t *inBuffer, size_t inBufSize, uint8_t *outBuffer, size_t outBufSize, float degrees, float scale);
-size_t autoTransformJpeg(const device_settings_t *settings, uint8_t *inBuffer, size_t inBufSize, uint8_t *outBuffer, size_t outBufSize);
+typedef tgx::RGB565 RGB565;
+typedef tgx::iVec2 coord;
+
+class Image {
+public:
+  Image(int width, int height) {
+    width_ = width;
+    height_ = height;
+    allocateFrameBuffer(width_, height_);
+    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+  };
+  Image(device_settings_t *settings) {
+    autoRotation = (float)settings->keyRotation * 90.0f;
+    autoFlipH = settings->keyFlipH;
+    autoFlipV = settings->keyFlipV;
+    width_ = settings->keyWidth;
+    height_ = settings->keyHeight;
+    allocateFrameBuffer(width_, height_);
+    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+  }
+  Image(RGB565 *frameBuffer, int width, int height) {
+    width_ = width;
+    height_ = height;
+    frameBuffer_ = frameBuffer;
+    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+  }
+  Image(RGB565 *frameBuffer, device_settings_t *settings) {
+    autoRotation = (float)settings->keyRotation * 90.0f;
+    autoFlipH = settings->keyFlipH;
+    autoFlipV = settings->keyFlipV;
+    width_ = settings->keyWidth;
+    height_ = settings->keyHeight;
+    frameBuffer_ = frameBuffer;
+    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+  }
+  ~Image() { freeFrameBuffer(); }
+
+  // Import
+  bool importJpeg(const uint8_t *inBuffer, const uint16_t inLength);
+  bool importJpegRandom(uint8_t *arrayOfJpgs[], uint16_t sizes[], size_t jpgCount);
+  // bool importPng(const uint8_t* buffer, const uint16_t bufferLen);
+#if STREAMDECK_IMAGE_HELPER_USE_SD
+  bool importJpeg(File file);
+  bool importJpeg(const char *filePath);
+  bool importJpegRandom(const char *directory);
+  // bool importPng(File file);
+  // bool importPng(const char* path);
+#endif // STREAMDECK_IMAGE_HELPER_USE_SD
+  
+  // Export
+  size_t exportJpeg(uint8_t *outBuffer, uint16_t outLength);
+
+  // USB Shortcuts
+  bool sendToKey(StreamdeckController *sdc, uint16_t keyIndex);
+
+  // Graphical manipulations
+  void transform(float scaleFactor, float rotationDegrees, RGB565 backgroundColour = tgx::RGB565_Black);
+  void rotate3d(float xRotationDegrees, float yRotationDegrees, float zRotationDegrees);
+
+private:
+  tgx::Image<tgx::RGB565> im_;
+
+  JPEGENC jpgEncoder;
+  JPEGDEC jpgDecoder;
+  PNG pngDecoder;
+
+  void allocateFrameBuffer(const uint16_t width, const uint16_t height);
+  void freeFrameBuffer();
+
+  // Graphical shortcuts
+  void blitWithScalingAndAutorotation(tgx::Image<tgx::RGB565> srcImg);
+
+  RGB565 *frameBuffer_ = nullptr;
+  bool madeFrameBuffer = false;
+  int width_ = 0;
+  int height_ = 0;
+  float autoRotation = 0.0f;
+  bool autoFlipH = false;
+  bool autoFlipV = false;
+};
 
 } // namespace Streamdeck
 

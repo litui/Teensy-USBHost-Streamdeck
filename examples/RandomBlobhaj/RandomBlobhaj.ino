@@ -27,7 +27,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
    On load, will start very rapidly putting blobhaj images on all the buttons,
    randomly selecting, rotating, and scaling them.
-
 */
 #include "blobhaj.h"
 #include "streamdeck.hpp"

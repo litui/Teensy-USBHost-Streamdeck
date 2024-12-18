@@ -52,7 +52,7 @@ public:
     width_ = width;
     height_ = height;
     allocateFrameBuffer(width_, height_);
-    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+    im = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
   };
   Image(device_settings_t *settings) {
     autoRotation = (float)settings->keyRotation * 90.0f;
@@ -61,13 +61,13 @@ public:
     width_ = settings->keyWidth;
     height_ = settings->keyHeight;
     allocateFrameBuffer(width_, height_);
-    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+    im = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
   }
   Image(RGB565 *frameBuffer, int width, int height) {
     width_ = width;
     height_ = height;
     frameBuffer_ = frameBuffer;
-    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+    im = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
   }
   Image(RGB565 *frameBuffer, device_settings_t *settings) {
     autoRotation = (float)settings->keyRotation * 90.0f;
@@ -76,7 +76,7 @@ public:
     width_ = settings->keyWidth;
     height_ = settings->keyHeight;
     frameBuffer_ = frameBuffer;
-    im_ = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
+    im = tgx::Image<tgx::RGB565>(frameBuffer_, width_, height_);
   }
   ~Image() { freeFrameBuffer(); }
 
@@ -100,14 +100,15 @@ public:
   bool sendToKey(StreamdeckController *sdc, uint16_t keyIndex);
 
   // Graphical manipulations
-  void fill(RGB565 colour = tgx::RGB565_Black);
+  tgx::Image<tgx::RGB565>* getTGXImage() { return &im; };
+  tgx::Image<tgx::RGB565>* IM() { return &im; };
   void transform(float scaleFactor, float rotationDegrees,
                  RGB565 backgroundColour = tgx::RGB565_Black);
   void rotate3d(float xRotationDegrees, float yRotationDegrees,
                 float zRotationDegrees);
 
 private:
-  tgx::Image<tgx::RGB565> im_;
+  tgx::Image<tgx::RGB565> im;
 
   JPEGENC jpgEncoder;
   JPEGDEC jpgDecoder;

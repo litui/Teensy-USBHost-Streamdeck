@@ -103,14 +103,14 @@ void Image::blitWithScalingAndAutorotation(tgx::Image<tgx::RGB565> srcImg) {
                             ? (float)width_ / (float)srcImg.width()
                             : (float)height_ / (float)srcImg.height();
 
-    im_.blitScaledRotated(srcImg, tempCentre, thisCentre, scaleFactor,
+    im.blitScaledRotated(srcImg, tempCentre, thisCentre, scaleFactor,
                           autoRotation);
 
     // If the image is the same size or smaller, just blit it into place,
     // centred.
   } else {
     // Use the scaled rotated blit due to autorotation, but fix scale at 1.0
-    im_.blitScaledRotated(srcImg, tempCentre, thisCentre, 1.0, autoRotation);
+    im.blitScaledRotated(srcImg, tempCentre, thisCentre, 1.0, autoRotation);
   }
 }
 
@@ -246,19 +246,15 @@ void Image::transform(float scaleFactor, float rotationDegrees,
   RGB565 *tempFb = (RGB565 *)malloc(width_ * height_ * sizeof(RGB565));
   tgx::Image<tgx::RGB565> tempImg(tempFb, width_, height_);
 
-  tempImg.copyFrom(im_);
+  tempImg.copyFrom(im);
 
   coord half(width_ / 2, height_ / 2);
 
   // Clear the first image and blit & transform the copy onto it.
-  im_.clear(backgroundColour);
-  im_.blitScaledRotated(tempImg, half, half, scaleFactor, rotationDegrees);
+  im.clear(backgroundColour);
+  im.blitScaledRotated(tempImg, half, half, scaleFactor, rotationDegrees);
 
   free(tempFb);
-}
-
-void Image::fill(RGB565 colour) {
-  im_.fillScreen(colour);
 }
 
 } // namespace Streamdeck

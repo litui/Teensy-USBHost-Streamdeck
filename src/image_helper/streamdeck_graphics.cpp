@@ -257,6 +257,10 @@ void Image::transform(float scaleFactor, float rotationDegrees,
   free(tempFb);
 }
 
+void Image::fill(RGB565 colour) {
+  im_.fillScreen(colour);
+}
+
 } // namespace Streamdeck
 
 #endif // STREAMDECK_IMAGE_HELPER_ENABLE

@@ -100,6 +100,7 @@ public:
   bool sendToKey(StreamdeckController *sdc, uint16_t keyIndex);
 
   // Graphical manipulations
+  void fill(RGB565 colour = tgx::RGB565_Black);
   void transform(float scaleFactor, float rotationDegrees,
                  RGB565 backgroundColour = tgx::RGB565_Black);
   void rotate3d(float xRotationDegrees, float yRotationDegrees,

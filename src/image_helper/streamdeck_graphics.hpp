@@ -104,8 +104,6 @@ public:
   tgx::Image<tgx::RGB565>* IM() { return &im; };
   void transform(float scaleFactor, float rotationDegrees,
                  RGB565 backgroundColour = tgx::RGB565_Black);
-  void rotate3d(float xRotationDegrees, float yRotationDegrees,
-                float zRotationDegrees);
 
 private:
   tgx::Image<tgx::RGB565> im;

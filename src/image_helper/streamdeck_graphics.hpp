@@ -25,9 +25,9 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
-#include "device_specifics.hpp"
-#include "streamdeck_config.hpp"
-#include "usbhost_driver/streamdeck_usb.hpp"
+#include "../device_specifics.hpp"
+#include "../../streamdeck_config.hpp"
+#include "../usbhost_driver/streamdeck_usb.hpp"
 #include <Arduino.h>
 
 #if STREAMDECK_IMAGE_HELPER_ENABLE

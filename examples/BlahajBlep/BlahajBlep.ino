@@ -22,8 +22,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 /* Simple Blahaj Blep buttons example
 
-   This file has not yet been tested in the Arduino IDE so might need slight
-   changes.
+   This file has been tested in Arduino IDE 2.3.4 and is currently experiencing
+   an issue where it freezes irrevocably after a keypress. This does not happen
+   in PlatformIO.
 
    On load, will put blobhaj emoji onto each button. When buttons are pressed
    the blobhaj will blep/mlem. When released, the blobhaj will return to its
@@ -31,10 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 */
 #include "images.h"
-#include "streamdeck.hpp"
-#include <USBHost_t36.h>
-
-namespace USB {
+#include "streamdeck.h"
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
@@ -51,9 +49,9 @@ USBHIDInput *hiddrivers[] = {&sdc1};
 const char *hid_driver_names[CNT_HIDDEVICES] = {"StreamDeck1"};
 bool hid_driver_active[CNT_HIDDEVICES] = {false};
 
-void init() { myusb.begin(); }
+void setup() { myusb.begin(); }
 
-void tick() {
+void loop() {
   using namespace Streamdeck;
   myusb.Task();
 
@@ -104,9 +102,8 @@ void tick() {
 
         StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
         sdc->attachSinglePress(buttonPressed);
-        sdc->flushImageReports();
 
-        for (uint8_t i = 0; i < 15; i++) {
+        for (uint8_t i = 0; i < sdc->getSettings()->keyCount; i++) {
           sdc->setKeyImage(i, image_released, sizeof(image_released));
         }
       }
@@ -114,6 +111,7 @@ void tick() {
     if (hid_driver_active[i]) {
       StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
       sdc->Task();
+      delay(1);
     }
   }
 }
@@ -125,4 +123,5 @@ void buttonPressed(Streamdeck::StreamdeckController *sdc, uint16_t keyIndex,
   } else {
     sdc->setKeyImage(keyIndex, image_released, sizeof(image_released));
   }
+  delay(1);
 }

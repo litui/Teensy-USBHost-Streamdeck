@@ -25,10 +25,9 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
-#include "device_specifics.hpp"
-#include "streamdeck_config.hpp"
+#include "../device_specifics.hpp"
+#include "../../streamdeck_config.hpp"
 #include <Arduino.h>
-#include <Metro.h>
 #include <USBHost_t36.h>
 #include <circular_buffer.h>
 #include <queue>

@@ -93,7 +93,6 @@ bool StreamdeckController::hid_process_in_data(const Transfer_t *transfer) {
       states[i].holdResolved = false;
     }
   }
-  memcpy(states, report->states, settings->keyCount);
   return true;
 }
 
@@ -190,7 +189,6 @@ void StreamdeckController::blankAllKeys() {
   for (uint16_t i = 0; i < settings->keyCount; i++) {
     setKeyBlank(i);
   }
-  delay(5);
 }
 #endif // STREAMDECK_USBHOST_ENABLE_BLANK_IMAGE
 
@@ -281,6 +279,8 @@ void StreamdeckController::Task() {
   // iterate again to kill the changed flag.
   for (uint16_t key = 0; key < settings->keyCount; key++)
       states[key].changed = false;
+
+  delay(1);
 }
 
 } // namespace Streamdeck

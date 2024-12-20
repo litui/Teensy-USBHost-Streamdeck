@@ -25,9 +25,9 @@ Credit to:
          www.fourwalledcubicle.com
 */
 #pragma once
-#include "src/usbhost_driver/streamdeck_usb.hpp"
+#include "usbhost_driver/streamdeck_usb.hpp"
 #if STREAMDECK_IMAGE_HELPER_ENABLE
-#include "src/image_helper/streamdeck_graphics.hpp"
+#include "image_helper/streamdeck_graphics.hpp"
 #endif // STREAMDECK_IMAGE_HELPER_ENABLE
 
 namespace Streamdeck {

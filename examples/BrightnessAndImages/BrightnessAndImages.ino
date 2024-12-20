@@ -22,17 +22,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 /* Stream Deck Brightness and Images Demo
 
-   This file has not yet been tested in the Arduino IDE so might need slight
-   changes.
+   This file has been tested in Arduino IDE 2.3.4 and works fine.
 
    On load, an image of a vaporwave/mallsoft bedroom will appear spanning all
    15 keys. Pressing any of the keys will set the brightness from 0.0
    to 1.0 depending which key is pressed.
 
 */
+#include "streamdeck.h"
 #include "images.h"
-#include "streamdeck.hpp"
-#include <USBHost_t36.h>
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
@@ -102,9 +100,8 @@ void loop() {
 
         StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
         sdc->attachSinglePress(buttonPressed);
-        sdc->flushImageReports();
 
-        for (uint8_t i = 0; i < 15; i++) {
+        for (uint8_t i = 0; i < sdc->getSettings()->keyCount; i++) {
           sdc->setKeyImage(i, images[i], image_sizes[i]);
         }
       }

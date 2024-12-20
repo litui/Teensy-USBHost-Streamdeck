@@ -22,18 +22,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 /* Random Blobhaj + transform
 
-   This file has not yet been tested in the Arduino IDE so might need slight
-   changes.
+   This file has been tested in Arduino IDE 2.3.4 and works fine.
 
    On load, will start very rapidly putting blobhaj images on all the buttons,
    randomly selecting, rotating, and scaling them.
 */
-#include "blobhaj.h"
-#include "streamdeck.hpp"
 #include <Entropy.h>
 #include <USBHost_t36.h>
-
-namespace USB {
+#include "streamdeck.h"
+#include "blobhaj.h"
 
 USBHost myusb;
 USBHIDParser hid1(myusb);
@@ -105,8 +102,8 @@ void loop() {
           Serial.printf("  Serial: %s\n", psz);
 
         StreamdeckController *sdc = (StreamdeckController *)hiddrivers[i];
-        sdc->flushImageReports();
-        sdc->blankAllKeys();
+        // sdc->flushImageReports();
+        // sdc->blankAllKeys();
       }
     }
     if (hid_driver_active[i]) {
@@ -125,5 +122,3 @@ void loop() {
     }
   }
 }
-
-} // namespace USB
